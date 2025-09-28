@@ -38,8 +38,9 @@ export const generateTwoFactorCode = (): string => {
 
 const CODE_EXPIRY_TIME = 6 * 60 * 1000
 
-export const finder = (email: string, password: string): User | null => {
+export const finder = (email: string, password: string): User | { code: string } | null => {
     const user = mockUsers.find(u => u.email === email && u.password === password)
+
 
     if (user && user.twoFactorEnabled) {
         user.currentCode = generateTwoFactorCode()
@@ -48,7 +49,12 @@ export const finder = (email: string, password: string): User | null => {
         console.log(`Код действителен до: ${new Date(user.codeExpiry).toLocaleTimeString()}`)
     }
 
-    return user || null
+    if (sessionStorage.getItem('TWO_FACTOR_KEY')) {
+        return user || null
+    }
+
+    return {code: 'TWO_FACTOR_AUTH'}
+
 }
 
 export const verifyTwoFactorCode = (email: string, code: string): boolean => {

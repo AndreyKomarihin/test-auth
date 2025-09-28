@@ -4,16 +4,22 @@ import Image from "next/image";
 import logo from '../../../../public/logo.png'
 import cn from "classnames";
 import {ChangeEvent, FormEvent, useEffect, useState} from "react";
-import {config, FormDatal, initialState} from "@/app/shared/constants/constants";
-import {finder, getCurrentCode, isCodeExpired, mockUsers, verifyTwoFactorCode} from "@/app/shared/mokAPI/mokApi";
-import {ConfigProvider, Flex, Input} from 'antd'
-import Title from "antd/es/skeleton/Title";
+import {config, initialState} from "@/app/shared/constants/constants";
+import {finder, getCurrentCode, isCodeExpired, verifyTwoFactorCode} from "@/app/shared/mokAPI/mokApi";
+import {ConfigProvider, Input} from 'antd'
 import {ArrowLeftOutlined} from "@ant-design/icons";
 
 type errorStatus = '' | 'warning' | 'error' | undefined
 
-export const Authorization = () => {
+const authSteps = {
+    'LOGIN': <LoginComponent/>,
+    'TWO_FACTOR': <TwoFactor/>
+}
 
+// Ребят, я тут использовал sessionStorage, чтобы указать, что для текущего пользователя twoFactor не нужен, а если в storage
+// нет значения, то мок ответит, что нужен twoFactor
+
+export const Authorization = () => {
     const [formState, setFormState] = useState(initialState)
     const [isTwoFactor, setIsTwoFactor] = useState(false)
     const [twoFactorSuccess, setTwoFactorSuccess] = useState(false)
@@ -21,11 +27,12 @@ export const Authorization = () => {
     const [showNewCodeBtn, setShowNewCodeBtn] = useState(false)
     const [errorCode, setErrorCode] = useState<errorStatus>('')
 
+
     const onChange = (e: ChangeEvent<HTMLInputElement>) => {
-            const value = e. target.value
-            const name = e. target. name
-            setFormState((prev) => ({ ... prev, [name]: value}))
-}
+        const value = e.target.value
+        const name = e.target.name
+        setFormState((prev) => ({...prev, [name]: value}))
+    }
 
     const onSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -33,6 +40,11 @@ export const Authorization = () => {
 
     const handleClick = () => {
         const user = finder(formState.email, formState.password)
+
+        if (user && 'code' in user) {
+            return setIsTwoFactor(false)
+        }
+
         if (user) {
             setCurrentUser(user.email)
             if (user.twoFactorEnabled) {
@@ -100,51 +112,65 @@ export const Authorization = () => {
         <div>
             <main className={styles.main}>
                 <div className={styles.authContainer}>
-                    {isTwoFactor ? <ArrowLeftOutlined onClick={() => setIsTwoFactor(false)} style={{ fontSize: '18px'}}/>
+                    {isTwoFactor ? <ArrowLeftOutlined onClick={() => setIsTwoFactor(false)} style={{fontSize: '18px'}}/>
                         : ''
                     }
                     {!isTwoFactor ? <form onSubmit={onSubmit} className={styles.authInputBox}>
-                        <div className={styles.authTextBox}>
-                            <Image width={98} height={24} src={logo} alt="logo" />
-                            <h3 className={styles.authText}>Sign in to your account to <br/> continue</h3>
-                        </div>
+                            <div className={styles.authTextBox}>
+                                <Image width={98} height={24} src={logo} alt="logo"/>
+                                <h3 className={styles.authText}>Sign in to your account to <br/> continue</h3>
+                            </div>
                             {config.map((item) => (
-                                <div key={item.name}><div className={styles.inputBox}><input name={item.name} value={formState[item.name]} onChange={onChange} className={styles.input} type={item.type} placeholder={item.placeholder} /><img className={styles.icon} src={item.src}/></div></div>
+                                <div key={item.name}>
+                                    <div className={styles.inputBox}><input name={item.name} value={formState[item.name]}
+                                                                            onChange={onChange} className={styles.input}
+                                                                            type={item.type}
+                                                                            placeholder={item.placeholder}/><img
+                                        className={styles.icon} src={item.src}/></div>
+                                </div>
                             ))}
-                        <button onClick={handleClick} className={cn(styles.submitBtn, finder(formState.email, formState.password) ? styles.submit : '')} type='submit'>Log in</button>
-                    </form>
+                            <button onClick={handleClick}
+                                    className={cn(styles.submitBtn, finder(formState.email, formState.password) ? styles.submit : '')}
+                                    type='submit'>Log in
+                            </button>
+                        </form>
                         :
                         <form onSubmit={onSubmit} className={styles.twoFactorBox}>
                             <div className={styles.authTextBox}>
-                                <Image width={98} height={24} src={logo} alt="logo" />
+                                <Image width={98} height={24} src={logo} alt="logo"/>
                                 <div className={styles.twoFactorTextBox}>
                                     <h3 className={styles.authText}>Two-Factor Authentication</h3>
-                                    <p className={styles.twoFactorText}>Enter the 6-digit code from the Google <br/>  Authenticator app</p>
+                                    <p className={styles.twoFactorText}>Enter the 6-digit code from the
+                                        Google <br/> Authenticator app</p>
                                 </div>
                             </div>
                             <div className={styles.twoFactorContinueBox}>
-                            <ConfigProvider
-                                theme={{
-                                    token: {
-
-                                    },
-                                    components: {
-                                        Input: {
-                                            paddingInlineLG: 11,
-                                            paddingBlockLG: 10,
-                                            inputFontSizeLG: 24,
+                                <ConfigProvider
+                                    theme={{
+                                        token: {},
+                                        components: {
+                                            Input: {
+                                                paddingInlineLG: 11,
+                                                paddingBlockLG: 10,
+                                                inputFontSizeLG: 24,
+                                            },
                                         },
-                                    },
-                                }}
-                            >
-                                <Input.OTP status={errorCode} onChange={handleChange} className={styles.twoFactor} size={'large'} style={{ gap: '12px', justifyContent: 'space-between' }} />
-                                {errorCode && (<p className={styles.errorText}>Invalid Code</p>)}
-                            </ConfigProvider>
-                            {twoFactorSuccess || errorCode === 'error' ? <button onClick={handleClickAuthSuccess} className={cn(styles.submitBtn, styles.continueBtn, twoFactorSuccess && styles.submit)} type='submit'>Continue</button>
-                            :
-                                showNewCodeBtn &&
-                                <button onClick={handleGetNew} className={cn(styles.submitBtn, styles.submit, styles.continueBtn)} type='submit'>Get new</button>
-                            }
+                                    }}
+                                >
+                                    <Input.OTP status={errorCode} onChange={handleChange} className={styles.twoFactor}
+                                               size={'large'} style={{gap: '12px', justifyContent: 'space-between'}}/>
+                                    {errorCode && (<p className={styles.errorText}>Invalid Code</p>)}
+                                </ConfigProvider>
+                                {twoFactorSuccess || errorCode === 'error' ?
+                                    <button onClick={handleClickAuthSuccess}
+                                            className={cn(styles.submitBtn, styles.continueBtn, twoFactorSuccess && styles.submit)}
+                                            type='submit'>Continue</button>
+                                    :
+                                    showNewCodeBtn &&
+                                    <button onClick={handleGetNew}
+                                            className={cn(styles.submitBtn, styles.submit, styles.continueBtn)}
+                                            type='submit'>Get new</button>
+                                }
                             </div>
                         </form>
                     }
