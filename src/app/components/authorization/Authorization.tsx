@@ -16,7 +16,6 @@ export const Authorization = () => {
 
     const [formState, setFormState] = useState(initialState)
     const [isTwoFactor, setIsTwoFactor] = useState(false)
-    const [twoFactorCode, setTwoFactorCode] = useState('')
     const [twoFactorSuccess, setTwoFactorSuccess] = useState(false)
     const [currentUser, setCurrentUser] = useState<string | null>(null)
     const [showNewCodeBtn, setShowNewCodeBtn] = useState(false)
@@ -46,7 +45,6 @@ export const Authorization = () => {
     }
 
     const handleChange = (value: string) => {
-        setTwoFactorCode(value)
 
         if (value.length === 6 && currentUser) {
             const isExpired = isCodeExpired(currentUser)
@@ -86,7 +84,6 @@ export const Authorization = () => {
         if (currentUser) {
             const user = finder(formState.email, formState.password)
             if (user) {
-                setTwoFactorCode('')
                 setTwoFactorSuccess(false)
                 setShowNewCodeBtn(false)
                 console.log('Новый код для', user.email, ':', getCurrentCode(user.email))
@@ -146,7 +143,7 @@ export const Authorization = () => {
                             {twoFactorSuccess || errorCode === 'error' ? <button onClick={handleClickAuthSuccess} className={cn(styles.submitBtn, styles.continueBtn, twoFactorSuccess && styles.submit)} type='submit'>Continue</button>
                             :
                                 showNewCodeBtn &&
-                                <button onClick={handleGetNew} className={cn(styles.submitBtn, styles.submit)} type='submit'>Get new</button>
+                                <button onClick={handleGetNew} className={cn(styles.submitBtn, styles.submit, styles.continueBtn)} type='submit'>Get new</button>
                             }
                             </div>
                         </form>

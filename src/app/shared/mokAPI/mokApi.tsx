@@ -36,7 +36,7 @@ export const generateTwoFactorCode = (): string => {
     return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
-const CODE_EXPIRY_TIME = 6 * 60 * 100
+const CODE_EXPIRY_TIME = 6 * 60 * 1000
 
 export const finder = (email: string, password: string): User | null => {
     const user = mockUsers.find(u => u.email === email && u.password === password)
